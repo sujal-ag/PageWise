@@ -1,10 +1,11 @@
 import React from 'react'
-import Hero from '../components/HeroSection.jsx'
+import {  HeroSection, Example } from '../components/index.js'
 
 function Home() {
   return (
     <div>
-      <Hero />
+      <HeroSection />
+      <Example />
     </div>
   )
 }

@@ -7,7 +7,7 @@ function Navbar() {
   const navigate = useNavigate()
 
   return (
-    <nav className='md:mx-10 flex items-center justify-between text-sm py-4 mb-5 border-b border-b-gray-300'>
+    <nav className='md:mx-10 px-4 md:px-0 flex items-center justify-between text-sm py-4 mb-5 border-b border-b-gray-300'>
 
       <div className="flex-shrink-0">
         <img onClick={() => (navigate("/about"))} src={LogoWithText} alt="Logo with text" className='h-12'/>

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Search, BrainCircuit, FileSearch, CheckCircle2, ArrowRight } from 'lucide-react'
 
 function Hero() {
@@ -24,7 +24,7 @@ function Hero() {
   };
 
   return (
-    <section className="relative bg-white pt-24 pb-20 overflow-hidden">
+    <section className="relative bg-white pt-24 overflow-hidden">
       <div className="absolute top-0 right-0 w-72 h-72 bg-orange-50 rounded-full blur-[120px] -z-10 opacity-60" />
 
       <div className="max-w-7xl mx-auto px-6 text-center">
@@ -82,7 +82,7 @@ function Hero() {
         </div>
 
         {/* Example */}
-        <div className="mt-20 max-w-3xl mx-auto border border-gray-100 rounded-3xl bg-white shadow-[0_20px_50px_rgba(255,165,0,0.1)] p-2">
+        {/* <div className="mt-20 max-w-3xl mx-auto border border-gray-100 rounded-3xl bg-white shadow-[0_20px_50px_rgba(255,165,0,0.1)] p-2">
           <div className="bg-gray-50 rounded-2xl p-6 md:p-10 text-left italic">
             <p className="text-gray-500 text-sm text-center mb-4">Example</p>
 
@@ -106,7 +106,7 @@ function Hero() {
             </div>
 
           </div>
-        </div>
+        </div> */}
 
       </div>
     </section>

@@ -3,6 +3,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useLocation } from 'react-router-dom';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { embedText } from '../utils/embedder.js'
+import { chunkText } from '../utils/chunker.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -28,25 +30,6 @@ function ReaderPage() {
   const baseWidth = Math.min(containerWidth * 0.92, 800);
   const pageWidth = baseWidth * scale;
 
-  const chunkText = (fullText, chunkSize = 300, overlap = 50) => {
-    const chunks = [];
-
-    fullText.forEach(({ page, text }) => {
-      const words = text.split(' ').filter(w => w.trim() !== '');
-      let i = 0;
-      while(i < words.length) {
-        const chunkWords = words.slice(i, i + chunkSize);
-        chunks.push({
-          page,
-          text: chunkWords.join(' '),
-          // chunkIndex: chunks.length
-        })
-        i += chunkSize - overlap;
-      }
-    });
-    return chunks;
-  }
-
   async function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
 
@@ -62,10 +45,10 @@ function ReaderPage() {
       fullText.push({ page: i, text: pageText });
     }
 
-    console.log(fullText);
-
     const chunks = chunkText(fullText);
-    console.log(chunks);
+
+    const embeddedChunks = await embedText(chunks);
+    console.log('Embedded Chunks:', embeddedChunks);
 
   }
 

@@ -9,7 +9,7 @@ export const chunkText = (fullText, chunkSize = 300, overlap = 50) => {
             chunks.push({
                 page,
                 text: chunkWords.join(' '),
-                // chunkIndex: chunks.length
+                chunkIndex: chunks.length
             })
             i += chunkSize - overlap;
         }

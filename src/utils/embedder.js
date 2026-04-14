@@ -1,18 +1,23 @@
 import { pipeline } from '@huggingface/transformers';
 
-export const embedText = async (chunks) => {
-    // Initialise the embedding pipeline
-    const pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+let pipe;
 
-    // Generate embeddings for each chunk
-    const embeddedChunks = [];
-    for (const chunk of chunks) {
-      const result = await pipe(chunk.text, { pooling: 'mean', normalize: true });
-      embeddedChunks.push({
-        text: chunk.text,
-        pageNumber: chunk.page,
-        embedding: Array.from(result.data)
-      });
-    }
-    return embeddedChunks;
-}
+export const embedText = async (chunks) => {
+  if (!pipe) {
+    pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  }
+
+  const texts = chunks.map(c => c.text);
+
+  const results = await pipe(texts, {
+    pooling: 'mean',
+    normalize: true
+  });
+
+  return chunks.map((chunk, i) => ({
+    text: chunk.text,
+    pageNumber: chunk.page,
+    chunkIndex: chunk.chunkIndex,
+    embedding: Array.from(results[i].data)
+  }));
+};

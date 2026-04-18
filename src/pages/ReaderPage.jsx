@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useLocation } from 'react-router-dom';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -14,7 +14,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-function ReaderPage() {
+function ReaderPage({worker}) {
   const [numPages, setNumPages] = useState(null);
   const [scale, setScale] = useState(1);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
@@ -47,8 +47,7 @@ function ReaderPage() {
 
     const chunks = chunkText(fullText);
 
-    const embeddedChunks = await embedText(chunks);
-    console.log('Embedded Chunks:', embeddedChunks);
+    worker.postMessage({ chunks });
 
   }
 

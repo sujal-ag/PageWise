@@ -4,9 +4,16 @@ let pipe;
 
 export const embedText = async (chunks) => {
   if (!pipe) {
-    pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    try {
+      pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+        device: 'webgpu', dtype: 'q8'
+      });
+      console.log('using webgpu')
+    } catch (e) {
+      console.log('webgpu not available, falling back to cpu')
+      pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    }
   }
-
   const texts = chunks.map(c => c.text);
 
   const results = await pipe(texts, {

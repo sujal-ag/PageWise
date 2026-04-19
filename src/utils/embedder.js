@@ -16,15 +16,25 @@ export const embedText = async (chunks) => {
   }
   const texts = chunks.map(c => c.text);
 
-  const results = await pipe(texts, {
-    pooling: 'mean',
-    normalize: true
-  });
+  let finalResults = [];
+
+  const batchSize = 10;
+
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+
+    const results = await pipe(batch, {
+      pooling: 'mean',
+      normalize: true
+    });
+
+    finalResults.push(...results);
+  }
 
   return chunks.map((chunk, i) => ({
     text: chunk.text,
     pageNumber: chunk.page,
     chunkIndex: chunk.chunkIndex,
-    embedding: Array.from(results[i].data)
+    embedding: Array.from(finalResults[i].data)
   }));
-};
+}

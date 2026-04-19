@@ -3,8 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useLocation } from 'react-router-dom';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
-import { embedText } from '../utils/embedder.js'
-import { chunkText } from '../utils/chunker.js';
+import { chunkText, saveChunks, clearChunks } from '../utils/index.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -47,8 +46,15 @@ function ReaderPage({worker}) {
 
     const chunks = chunkText(fullText);
 
+    clearChunks();
+
     worker.postMessage({ chunks });
 
+    worker.onmessage = (e) => {
+      console.log('Received embeddings from worker:', e.data);
+      // You can now use the embeddings (e.data) as needed in your application
+      saveChunks(e.data);
+    }
   }
 
   if (!file) {

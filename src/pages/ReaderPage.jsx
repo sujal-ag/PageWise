@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { chunkText, saveChunks, clearChunks } from '../utils/index.js';
+import { Search, X } from 'lucide-react';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -13,10 +14,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-function ReaderPage({worker}) {
+function ReaderPage({ worker }) {
   const [numPages, setNumPages] = useState(null);
   const [scale, setScale] = useState(1);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+  const [searchState, setSearchState] = useState('open'); // 'idle', 'open', 'searching', 'results'
+  const [query, setQuery] = useState('');
+  const [resultCount, setResultCount] = useState(0);
   const location = useLocation();
   const file = location.state?.uploadedFile;
 
@@ -24,6 +28,18 @@ function ReaderPage({worker}) {
     const handleResize = () => setContainerWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      console.log('key pressed', e.key, e.ctrlKey, e.shiftKey);
+      if (e.key === 'f' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        setSearchState(s => s === 'open' ? 'idle' : 'open');
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const baseWidth = Math.min(containerWidth * 0.92, 800);
@@ -67,6 +83,34 @@ function ReaderPage({worker}) {
 
   return (
     <div className="flex flex-col items-center bg-gray-50 min-h-screen py-10">
+      {/* Search Bar */}
+      {searchState === 'open' && (
+        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 flex items-center gap-3 px-4 py-3">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // search trigger here
+                }
+                if (e.key === 'Escape') setSearchState('idle');
+              }}
+              placeholder="Search anything in the document..."
+              className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+              autoFocus
+            />
+            {resultCount > 0 && (
+              <span className="text-xs text-gray-400 shrink-0">{resultCount} results</span>
+            )}
+            <button onClick={() => setSearchState('idle')} className="p-1 hover:text-orange-500 transition-colors">
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="fixed top-20 z-10 bg-white/90 backdrop-blur-md px-5 py-2 rounded-full shadow-md border border-gray-200 flex items-center gap-4">

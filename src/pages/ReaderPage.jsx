@@ -18,9 +18,10 @@ function ReaderPage({ worker }) {
   const [numPages, setNumPages] = useState(null);
   const [scale, setScale] = useState(1);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-  const [searchState, setSearchState] = useState('open'); // 'idle', 'open', 'searching', 'results'
+  const [searchState, setSearchState] = useState('idle'); // 'idle', 'open', 'searching', 'results'
   const [query, setQuery] = useState('');
   const [resultCount, setResultCount] = useState(0);
+  const[index, setIndex] = useState(false);
   const location = useLocation();
   const file = location.state?.uploadedFile;
 
@@ -32,8 +33,7 @@ function ReaderPage({ worker }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      console.log('key pressed', e.key, e.ctrlKey, e.shiftKey);
-      if (e.key === 'f' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      if (e.key === 'F' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
         e.preventDefault();
         setSearchState(s => s === 'open' ? 'idle' : 'open');
       }
@@ -56,20 +56,21 @@ function ReaderPage({ worker }) {
     for (let i = 1; i <= numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
+      console.log(content);
       const pageText = content.items.map(item => item.str).join(' ');
       fullText.push({ page: i, text: pageText });
     }
 
+    console.log('Full text extracted from PDF:', fullText);
+
     const chunks = chunkText(fullText);
 
     clearChunks();
-
     worker.postMessage({ chunks });
 
     worker.onmessage = (e) => {
-      console.log('Received embeddings from worker:', e.data);
-      // You can now use the embeddings (e.data) as needed in your application
-      saveChunks(e.data);
+      console.log('Received embeddings from worker');
+      setIndex(true);
     }
   }
 
@@ -94,11 +95,17 @@ function ReaderPage({ worker }) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  // search trigger here
+                  console.log('Searching for:', query);
+                  setSearchState('searching');
+                  worker.postMessage({ query });
+                  worker.onmessage = (e) => {
+                    console.log('Search results:', e.data);
+                  }
                 }
                 if (e.key === 'Escape') setSearchState('idle');
               }}
-              placeholder="Search anything in the document..."
+              placeholder={index ? "Type to search..." : "Indexing document...Wait for indexing to complete."}
+              disabled={!index}
               className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
               autoFocus
             />

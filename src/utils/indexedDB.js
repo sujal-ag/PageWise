@@ -15,9 +15,13 @@ const getDB = async () => {
 
 const saveChunks = async (chunks) => {
     const db = await getDB();
+    const tx = db.transaction(STORENAME, 'readwrite');
+
     for (const chunk of chunks) {
-        await db.put(STORENAME, chunk);
-    };
+        tx.store.put(chunk);
+    }
+
+    await tx.done;
 }
 
 const clearChunks = async() => {

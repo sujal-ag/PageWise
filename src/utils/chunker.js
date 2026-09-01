@@ -14,5 +14,6 @@ export const chunkText = (fullText, chunkSize = 300, overlap = 50) => {
             i += chunkSize - overlap;
         }
     });
+    console.log('Chunks created:', chunks.length, chunks);
     return chunks;
 }

@@ -1,11 +1,11 @@
 import { embedText } from "./embedder.js";
 import { chunkText } from "./chunker.js";
-import { saveChunks } from "./indexedDB.js";
-import { clearChunks } from "./indexedDB.js";
+import { saveChunks, clearChunks, getAllChunks } from "./indexedDB.js";
 
 export {
     embedText,
     chunkText,
     saveChunks,
-    clearChunks
+    clearChunks,
+    getAllChunks
 }

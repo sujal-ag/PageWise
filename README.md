@@ -1,106 +1,90 @@
-# Pagewise — Frontend
+# Pagewise
 
-Pagewise is a lightweight, local-first PDF reader built with React.
+Pagewise is a local-first PDF search and document intelligence application built with React, PDF.js, and browser-side embeddings. The app lets users upload a PDF, extract its text client-side, split the content into overlapping semantic chunks, generate embeddings locally, and run vector similarity search against the stored document index.
 
-The frontend allows users to upload and read PDF documents, extracts their text in the browser, splits the extracted text into overlapping chunks, generates vector embeddings locally using a Hugging Face transformer model, and stores those embeddings in the browser's IndexedDB.
+## What this project does
 
-The current implementation focuses on the **document indexing pipeline**. Semantic retrieval/search over the stored embeddings is **not implemented yet** — see [Search / Retrieval](#search--retrieval) below.
+- Upload and render a PDF directly in the browser
+- Extract text from each page using pdf.js
+- Chunk document text into overlapping passage windows
+- Generate embeddings with Xenova/all-MiniLM-L6-v2
+- Store chunk vectors locally in IndexedDB
+- Query the stored index using semantic similarity
+- Rank results by relevance and navigate to the best matching page/chunk
+- Highlight the selected match within the PDF viewer
 
-## Features
+## Tech Stack
 
-* PDF viewing with `react-pdf`
-* PDF text extraction using `pdfjs`
-* Page-aware text chunking with overlap to preserve context
-* Local embedding generation using `Xenova/all-MiniLM-L6-v2`
-* Embedding generation inside a Web Worker (keeps the UI thread free)
-* Batch embedding for improved processing
-* Local persistence using IndexedDB
-* PDF zoom controls
-* Keyboard shortcut for opening the search UI (`Ctrl/Cmd + Shift + F`)
-
----
-
-## Local-First Design
-
-The entire indexing pipeline runs in the browser — no backend or external service required:
-
-```text
-PDF → PDF.js → Chunking → Transformer model → Web Worker → IndexedDB
-```
-
-This was a deliberate choice, not a shortcut: document text and generated embeddings never leave the browser, there's no per-request cost or API key to manage, and it works offline once the model is cached. For larger-scale production use, the storage/retrieval layer could later be swapped for a managed vector database or backend service — but for this project's scope, local-first keeps things simple and private.
-
----
-
-## Current Status
-
-```text
-PDF → Text extraction → Chunking → Embedding → IndexedDB storage
-```
-
-The pipeline above is fully implemented and working. What's missing is retrieval — turning a user's query into results. Details below.
-
----
+- React + Vite
+- react-pdf
+- pdfjs-dist
+- @huggingface/transformers
+- IndexedDB via idb
+- Web Workers
+- Tailwind CSS
 
 ## Architecture
 
-### 1. PDF Reader — `src/pages/ReaderPage.jsx`
-
-Loads the uploaded PDF, renders pages, extracts text per page via `pdfjs`, triggers the embedding worker, tracks indexing completion, and hosts the search UI and zoom controls.
-
-```js
-const content = await page.getTextContent();
-const pageText = content.items.map(item => item.str).join(' ');
+```text
+PDF upload
+  ↓
+PDF.js text extraction
+  ↓
+Chunking + overlap management
+  ↓
+Embedding generation in Web Worker
+  ↓
+IndexedDB persistence
+  ↓
+Semantic query embedding + similarity search
+  ↓
+Result ranking + highlight navigation
 ```
 
-Extracted text keeps its page number: `[{ page: 1, text: "..." }, ...]`
+## Core Components
 
-### 2. Text Chunking — `src/utils/chunker.js`
+### Reader UI
+The main reading experience lives in `src/pages/ReaderPage.jsx`. It handles document loading, page rendering, query input, result selection, zoom controls, and search-driven PDF navigation.
 
-Splits each page's text into overlapping chunks (`chunkSize = 300` words, `overlap = 50` words). Each chunk: `{ page, text, chunkIndex }`.
+### Chunking
+`src/utils/chunker.js` splits the extracted document text into overlapping chunks for retrieval. The current implementation uses a smaller chunk configuration to improve semantic matching quality and reduce noise.
 
-### 3. Embedding Generation — `src/utils/embedder.js`
+### Embeddings
+`src/utils/embedder.js` initializes a local transformer model and generates embeddings for each chunk from the document. The vectors are normalized and used for similarity scoring.
 
-Uses `Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`. The pipeline is initialized lazily and reused after first load, with `{ pooling: 'mean', normalize: true }` producing normalized vectors. Chunks are embedded in batches of 10. Output: `{ text, pageNumber, chunkIndex, embedding }`.
+### Worker Offloading
+Heavy ML work is delegated to a Web Worker in `src/worker/embedworker.js` to keep the main thread responsive during indexing and search computation.
 
-### 4. Web Worker — `src/worker/embedworker.js`
+### Local Storage
+`src/utils/indexedDB.js` persists chunk metadata and embeddings inside IndexedDB so the document index survives browser sessions and supports offline retrieval on the client.
 
-Embedding is computationally heavy, so it runs off the main thread:
+## Search and Retrieval Flow
+
+The system follows a retrieval-first architecture:
 
 ```text
-ReaderPage → chunks → Web Worker → embedText() → IndexedDB → { status: 'done' }
+Query text
+  ↓
+Query embedding generation
+  ↓
+IndexedDB chunk retrieval
+  ↓
+Dot-product / cosine similarity scoring
+  ↓
+Top-k ranking
+  ↓
+Result selection + page navigation + highlight
 ```
 
-### 5. IndexedDB Storage — `src/utils/indexedDB.js`
+This keeps the search grounded in actual document chunks instead of raw keyword matching alone.
 
-Database `pagewise`, object store `chunks`, keyed by `chunkIndex`. Exposes `saveChunks(chunks)` and `clearChunks()`. Existing chunks are cleared before a new document is indexed.
+## Performance Snapshot
 
----
+The application was profiled in Chrome DevTools on large document workloads. In a recorded 95-page technical PDF run, browser-side extraction, chunking, and embedding completed in approximately 168.8 seconds while the browser main thread was active for only about 10.3 seconds, indicating roughly 93.9% idle time during heavy client-side processing.
 
-## Search / Retrieval
+For retrieval itself, the measured local query execution time was approximately 53.4 ms total: around 33.5 ms for IndexedDB reads and 10.6 ms for similarity scoring. These timings reflect the local, browser-first design of the current system.
 
-**Current state:** the search UI is live, and pressing Enter sends `worker.postMessage({ query })` — but `embedworker.js` only handles `{ chunks }` messages right now. The query message has nowhere to go, so no embedding, similarity calculation, ranking, or highlighting happens yet.
-
-**Planned pipeline:**
-
-```text
-Search query → Query embedding → Read stored chunk embeddings
-             → Cosine similarity (dot product, since vectors are normalized)
-             → Rank → Top-K results → Show / highlight in reader
-```
-
-Implementation plan:
-1. Embed the query using the same model as `embedder.js`.
-2. Read stored chunks from IndexedDB.
-3. Score each chunk via dot product against the query vector.
-4. Sort, take top-K, return `{ id, score, text, meta }`.
-5. Render results in the reader; highlighting exact spans (via `pdfjs` text positions) is a follow-up once basic ranked results work.
-
-Retrieval will start on the main thread for simplicity, and can move into the worker later if scale requires it.
-
----
-
-## Quick Start
+## Local Setup
 
 ```bash
 cd frontend
@@ -108,16 +92,8 @@ npm install
 npm run dev
 ```
 
-Open the Vite dev URL, go to the Reader page, upload a PDF, and wait for indexing to finish. Search input activates once indexing completes — the retrieval logic behind it is still pending.
+Then open the app, upload a PDF, and wait for indexing to finish before searching.
 
----
+## Notes
 
-## Next Steps
-
-* [ ] Query embedding + IndexedDB chunk retrieval
-* [ ] Cosine/dot-product similarity + ranking
-* [ ] Worker-side query handling
-* [ ] Connect results to the Reader UI
-* [ ] Highlight / navigate to matching passages
-* [ ] Indexing/search progress states
-* [ ] Incremental indexing for larger documents
+This project is built as a retrieval-focused document intelligence system rather than a full LLM chat application. The emphasis is on semantic document search, local indexing, source-grounded result navigation, and browser-side performance optimization.

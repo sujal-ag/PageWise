@@ -36,6 +36,10 @@ export const embedText = async (chunks) => {
     text: chunk.text,
     pageNumber: chunk.page,
     chunkIndex: chunk.chunkIndex,
+    startTokenIndex: chunk.startTokenIndex ?? 0,
+    endTokenIndex: chunk.endTokenIndex ?? 0,
+    pageTokenStart: chunk.pageTokenStart ?? chunk.startTokenIndex ?? 0,
+    pageTokenEnd: chunk.pageTokenEnd ?? chunk.endTokenIndex ?? 0,
     embedding: Array.from(finalResults[i].data)
   }));
 }

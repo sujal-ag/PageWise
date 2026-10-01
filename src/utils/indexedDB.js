@@ -29,7 +29,13 @@ const clearChunks = async() => {
     await db.clear(STORENAME);
 }
 
+const getAllChunks = async () => {
+    const db = await getDB();
+    return await db.getAll(STORENAME);
+}
+
 export {
     saveChunks,
-    clearChunks
+    clearChunks,
+    getAllChunks,
 }
